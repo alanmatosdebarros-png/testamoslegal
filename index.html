@@ -286,6 +286,8 @@ body[data-tela="editor"] .tela{max-width:none;gap:14px}
 .asset figcaption{font-size:11px;color:var(--muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .asset button{position:absolute;right:4px;top:4px;border:0;background:none;color:var(--muted);font-size:16px}
 /* IA */
+.prov-grupo{font:400 26px/1 var(--serif);margin:18px 0 10px}
+.prov-tags .gratis{border-color:var(--ok);color:var(--ok)}
 .provs{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
 .prov{background:var(--folha);border:1px solid var(--linha);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;position:relative}
 .prov.tem{border-color:var(--tinta)}
@@ -368,7 +370,7 @@ body[data-tela="editor"] .tela{max-width:none;gap:14px}
 
     <!-- EDITOR -->
     <section class="tela" id="t-editor" hidden>
-      <header class="ed-top"><button class="bt fino" type="button" id="edVolta">← Vídeos</button><input type="text" id="edNome" class="ed-nome" aria-label="Nome do vídeo"><span class="estado" id="edEstado"></span><button class="bt fino" type="button" id="edRetenta" hidden>Tentar de novo</button></header>
+      <header class="ed-top"><button class="bt fino" type="button" id="edVolta">← Vídeos</button><input type="text" id="edNome" class="ed-nome" aria-label="Nome do vídeo"><span class="estado" id="edEstado"></span><button class="bt fino" type="button" id="edPara" hidden>Parar</button><button class="bt fino" type="button" id="edRetenta" hidden>Tentar de novo</button></header>
       <div class="ed-corpo">
         <div class="ed-palco">
           <div class="ed-tela" id="edTela"><canvas id="edCv" width="540" height="960"></canvas>
@@ -458,7 +460,7 @@ body[data-tela="editor"] .tela{max-width:none;gap:14px}
     <section class="tela" id="t-ia" hidden>
       <header class="cab"><p class="sobre">IA</p><h1>Escolha a IA <em>e use a sua chave.</em></h1><p class="muted">As chaves ficam só neste navegador e cada chamada sai direto daqui pra empresa da IA. O gasto é na sua conta de cada uma.</p></header>
       <p class="resumo" id="iaResumo"></p>
-      <div class="provs" id="iaLista"></div>
+      <div id="iaLista"></div>
       <div class="cartao"><h3>Transcrição dos vídeos</h3><div class="pilha" id="iaTransc"></div></div>
     </section>
 
@@ -551,14 +553,28 @@ async function mbLoad(){ if(MB) return MB; MB=await import("https://cdn.jsdelivr
    Claude, Gemini, GPT, Kimi e Qwen. As chamadas saem direto do
    navegador pra empresa da IA; a chave nunca passa por outro lugar.
    ================================================================ */
+/* gratis: "sim" = tem chave grátis permanente · "teste" = créditos grátis no cadastro */
 const IA_PROV = {
-  claude:{nome:"Claude", empresa:"Anthropic", onde:"console.anthropic.com", url:"https://console.anthropic.com/settings/keys", texto:true, visao:true, web:true, imagem:false, cor:"#D97757"},
-  gemini:{nome:"Gemini", empresa:"Google", onde:"aistudio.google.com", url:"https://aistudio.google.com/apikey", texto:true, visao:true, web:true, imagem:true, cor:"#4F7DF3"},
+  gemini:{nome:"Gemini", empresa:"Google", onde:"aistudio.google.com", url:"https://aistudio.google.com/apikey", texto:true, visao:true, web:true, imagem:true, gratis:"sim", cor:"#4F7DF3"},
+  groq:{nome:"Groq", empresa:"Llama, GPT-OSS, Qwen, Kimi e Whisper", onde:"console.groq.com", url:"https://console.groq.com/keys", texto:true, visao:true, transcreve:true, gratis:"sim", cor:"#F55036"},
+  mistral:{nome:"Mistral", empresa:"Mistral AI", onde:"console.mistral.ai", url:"https://console.mistral.ai/api-keys", texto:true, visao:true, gratis:"sim", cor:"#FA520F"},
+  openrouter:{nome:"OpenRouter", empresa:"dezenas de modelos, vários grátis (:free)", onde:"openrouter.ai", url:"https://openrouter.ai/settings/keys", texto:true, visao:true, gratis:"sim", cor:"#6467F2"},
+  huggingface:{nome:"Hugging Face", empresa:"modelos abertos (Llama, Qwen, DeepSeek)", onde:"huggingface.co", url:"https://huggingface.co/settings/tokens", texto:true, visao:true, gratis:"sim", cor:"#FFB000"},
+  cohere:{nome:"Cohere", empresa:"Command", onde:"dashboard.cohere.com", url:"https://dashboard.cohere.com/api-keys", texto:true, visao:true, gratis:"sim", cor:"#39594D"},
+  deepseek:{nome:"DeepSeek", empresa:"DeepSeek", onde:"platform.deepseek.com", url:"https://platform.deepseek.com/api_keys", texto:true, visao:false, gratis:"teste", cor:"#4D6BFE"},
+  claude:{nome:"Claude", empresa:"Anthropic", onde:"console.anthropic.com", url:"https://console.anthropic.com/settings/keys", texto:true, visao:true, web:true, cor:"#D97757"},
   openai:{nome:"GPT", empresa:"OpenAI", onde:"platform.openai.com", url:"https://platform.openai.com/api-keys", texto:true, visao:true, web:true, imagem:true, transcreve:true, cor:"#10A37F"},
-  kimi:{nome:"Kimi", empresa:"Moonshot AI", onde:"platform.moonshot.ai", url:"https://platform.moonshot.ai/console/api-keys", texto:true, visao:true, web:true, imagem:false, cor:"#1A1A1A"},
-  qwen:{nome:"Qwen", empresa:"Alibaba Cloud", onde:"Model Studio (internacional)", url:"https://modelstudio.console.alibabacloud.com/", texto:true, visao:true, web:true, imagem:false, cor:"#615CED"}
+  xai:{nome:"Grok", empresa:"xAI", onde:"console.x.ai", url:"https://console.x.ai/", texto:true, visao:true, cor:"#111111"},
+  kimi:{nome:"Kimi", empresa:"Moonshot AI", onde:"platform.moonshot.ai", url:"https://platform.moonshot.ai/console/api-keys", texto:true, visao:true, web:true, cor:"#1A1A1A"},
+  qwen:{nome:"Qwen", empresa:"Alibaba Cloud", onde:"Model Studio (internacional)", url:"https://modelstudio.console.alibabacloud.com/", texto:true, visao:true, web:true, cor:"#615CED"},
+  together:{nome:"Together", empresa:"modelos abertos", onde:"api.together.ai", url:"https://api.together.ai/settings/api-keys", texto:true, visao:true, cor:"#0F6FFF"},
+  fireworks:{nome:"Fireworks", empresa:"modelos abertos", onde:"fireworks.ai", url:"https://fireworks.ai/account/api-keys", texto:true, visao:true, gratis:"teste", cor:"#6720FF"},
+  deepinfra:{nome:"DeepInfra", empresa:"modelos abertos", onde:"deepinfra.com", url:"https://deepinfra.com/dash/api_keys", texto:true, visao:true, cor:"#2F80ED"},
+  minimax:{nome:"MiniMax", empresa:"MiniMax", onde:"minimax.io", url:"https://www.minimax.io/platform", texto:true, visao:false, cor:"#E2457A"},
+  ai21:{nome:"Jamba", empresa:"AI21 Labs", onde:"studio.ai21.com", url:"https://studio.ai21.com/account/api-key", texto:true, visao:false, gratis:"teste", cor:"#E91E63"}
 };
-const IA_BASE = {kimi:"https://api.moonshot.ai/v1", qwen:"https://dashscope-intl.aliyuncs.com/compatible-mode/v1"};
+const IA_BASE = {kimi:"https://api.moonshot.ai/v1", qwen:"https://dashscope-intl.aliyuncs.com/compatible-mode/v1", deepseek:"https://api.deepseek.com/v1", groq:"https://api.groq.com/openai/v1", mistral:"https://api.mistral.ai/v1", openrouter:"https://openrouter.ai/api/v1", huggingface:"https://router.huggingface.co/v1", cohere:"https://api.cohere.ai/compatibility/v1", xai:"https://api.x.ai/v1", together:"https://api.together.xyz/v1", fireworks:"https://api.fireworks.ai/inference/v1", deepinfra:"https://api.deepinfra.com/v1/openai", minimax:"https://api.minimax.io/v1", ai21:"https://api.ai21.com/studio/v1"};
+const JSON_OK = new Set(["kimi","qwen","deepseek","groq","mistral","xai","together","fireworks","deepinfra"]);
 const WEB_CLAUDE = [{type:"web_search_20250305", name:"web_search", max_uses:4, user_location:{type:"approximate", country:"BR", timezone:"America/Sao_Paulo"}}];
 function iaCfg(){ let c={}; try{ c=JSON.parse(lsGet("ia","{}"))||{}; }catch(e){} c.chaves=c.chaves||{}; c.modelos=c.modelos||{}; c.listas=c.listas||{}; return c; }
 function iaSalva(c){ lsSet("ia", JSON.stringify(c)); }
@@ -573,7 +589,19 @@ const IA_PADRAO = {
   gemini:{texto:"gemini-2.5-flash", visao:"gemini-2.5-flash", imagem:"gemini-2.5-flash-image"},
   openai:{texto:"gpt-5-mini", visao:"gpt-5-mini", imagem:"gpt-image-1"},
   kimi:{texto:"kimi-k2-turbo-preview", visao:"moonshot-v1-8k-vision-preview"},
-  qwen:{texto:"qwen-plus", visao:"qwen-vl-max"}
+  qwen:{texto:"qwen-plus", visao:"qwen-vl-max"},
+  deepseek:{texto:"deepseek-chat"},
+  groq:{texto:"openai/gpt-oss-120b", visao:"meta-llama/llama-4-scout-17b-16e-instruct"},
+  mistral:{texto:"mistral-medium-latest", visao:"mistral-medium-latest"},
+  openrouter:{texto:"deepseek/deepseek-chat-v3.1:free", visao:"google/gemma-3-27b-it:free"},
+  huggingface:{texto:"openai/gpt-oss-120b", visao:"Qwen/Qwen2.5-VL-7B-Instruct"},
+  cohere:{texto:"command-a-03-2025", visao:"command-a-vision-07-2025"},
+  xai:{texto:"grok-4", visao:"grok-4"},
+  together:{texto:"meta-llama/Llama-3.3-70B-Instruct-Turbo", visao:"meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"},
+  fireworks:{texto:"accounts/fireworks/models/deepseek-v3p1", visao:"accounts/fireworks/models/qwen2p5-vl-32b-instruct"},
+  deepinfra:{texto:"meta-llama/Llama-3.3-70B-Instruct", visao:"meta-llama/Llama-3.2-11B-Vision-Instruct"},
+  minimax:{texto:"MiniMax-M2"},
+  ai21:{texto:"jamba-large"}
 };
 function iaEscolheModelo(p, uso, l){
   if(!l||!l.length) return "";
@@ -585,6 +613,20 @@ function iaEscolheModelo(p, uso, l){
   if(p==="gemini"){ if(uso==="imagem") return pega(m=>/flash.*image|image.*flash/.test(m)&&!/preview-tts/.test(m)) || pega(m=>/image/.test(m)&&/gemini/.test(m)); return pega(m=>/gemini/.test(m)&&/flash/.test(m)&&!/lite/.test(m)&&!sem.test(m)) || pega(m=>/gemini/.test(m)&&!sem.test(m)); }
   if(p==="openai"){ if(uso==="imagem") return pega(m=>/^gpt-image/.test(m)); return pega(m=>/^gpt-5/.test(m)&&/(mini|luna)/.test(m)&&!sem.test(m)) || pega(m=>/^gpt-\d/.test(m)&&!sem.test(m)); }
   if(p==="kimi"){ if(uso==="visao") return pega(m=>/vision|vl/.test(m)) || pega(m=>/kimi/.test(m)); return pega(m=>/kimi-k2/.test(m)&&!/vision/.test(m)) || pega(m=>/kimi|moonshot/.test(m)); }
+  const VIS=/(vision|vl\b|-vl|vlm|llava|pixtral|gemma-3|llama-4|scout|maverick|grok-4|grok-2-vision|command-a-vision)/i;
+  if(uso==="visao" && !["claude","gemini","openai","kimi","qwen"].includes(p)) return pega(m=>VIS.test(m)&&!sem.test(m)&&(p!=="openrouter"||/:free$/.test(m))) || pega(m=>VIS.test(m));
+  if(p==="deepseek") return l.includes("deepseek-chat")?"deepseek-chat":pega(m=>/deepseek/.test(m));
+  if(p==="groq") return l.includes("openai/gpt-oss-120b")?"openai/gpt-oss-120b":l.includes("llama-3.3-70b-versatile")?"llama-3.3-70b-versatile":pega(m=>!/whisper|guard|tts|prompt/.test(m));
+  if(p==="mistral") return l.includes("mistral-medium-latest")?"mistral-medium-latest":l.includes("mistral-large-latest")?"mistral-large-latest":pega(m=>/mistral/.test(m)&&!/embed|moderation|ocr/.test(m));
+  if(p==="openrouter") return pega(m=>/deepseek.*:free$/.test(m)) || pega(m=>/(llama-3\.3-70b|gpt-oss|qwen3).*:free$/.test(m)) || pega(m=>/:free$/.test(m));
+  if(p==="huggingface") return l.includes("openai/gpt-oss-120b")?"openai/gpt-oss-120b":pega(m=>/llama-3\.3-70b|deepseek-v3|qwen3/i.test(m));
+  if(p==="cohere") return pega(m=>/command-a(?!-vision)/.test(m)) || pega(m=>/command/.test(m));
+  if(p==="xai") return pega(m=>/^grok-4/.test(m)&&!/image|vision/.test(m)) || pega(m=>/^grok/.test(m)&&!/image/.test(m));
+  if(p==="together") return pega(m=>/Llama-3\.3-70B-Instruct-Turbo/.test(m)) || pega(m=>/deepseek-v3|Qwen3/i.test(m));
+  if(p==="fireworks") return pega(m=>/deepseek-v3/.test(m)) || pega(m=>/llama/.test(m));
+  if(p==="deepinfra") return pega(m=>/Llama-3\.3-70B-Instruct$/.test(m)) || pega(m=>/deepseek-ai\/DeepSeek-V3/.test(m));
+  if(p==="minimax") return pega(m=>/MiniMax-M/.test(m));
+  if(p==="ai21") return pega(m=>/jamba-large/.test(m)) || pega(m=>/jamba/.test(m));
   if(p==="qwen"){ if(uso==="visao") return pega(m=>/vl/.test(m)&&/(max|plus)/.test(m)) || pega(m=>/vl/.test(m)); return l.includes("qwen-plus")?"qwen-plus":pega(m=>/^qwen/.test(m)&&!/vl|audio|omni|math|coder|mt|image/.test(m)); }
   return "";
 }
@@ -606,7 +648,10 @@ async function iaListarModelos(p){
   let ids=[];
   if(p==="claude"){ const d=await iaFetch(p,"https://api.anthropic.com/v1/models?limit=100",{headers:{"x-api-key":k,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"}}); ids=(d.data||[]).map(m=>m.id); }
   else if(p==="gemini"){ const d=await iaFetch(p,`https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key=${encodeURIComponent(k)}`,{}); ids=(d.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes("generateContent")).map(m=>m.name.replace(/^models\//,"")); }
-  else { const base=p==="openai"?"https://api.openai.com/v1":IA_BASE[p]; const d=await iaFetch(p, base+"/models", {headers:{Authorization:"Bearer "+k}}); ids=(d.data||[]).map(m=>m.id); }
+  else { const base=p==="openai"?"https://api.openai.com/v1":IA_BASE[p];
+    if(p==="openrouter") await iaFetch(p, base+"/key", {headers:{Authorization:"Bearer "+k}});
+    if(p==="huggingface"){ let r=null; try{ r=await fetch("https://huggingface.co/api/whoami-v2",{headers:{Authorization:"Bearer "+k}}); }catch(e){} if(r&&r.status===401) throw new Error("Hugging Face recusou a chave (401). Confira em IA se ela está certa."); }
+    const d=await iaFetch(p, base+"/models", {headers:{Authorization:"Bearer "+k}}); ids=(d.data||d.models||[]).map(m=>m.id||m.name).filter(Boolean); }
   const c=iaCfg(); c.listas[p]=ids.sort(); iaSalva(c); return ids;
 }
 /* texto (com imagens opcionais e busca na web opcional) → {texto, fontes} */
@@ -642,16 +687,20 @@ async function iaTexto({prompt, system="", imagens=[], web=false, json=false, ma
   const base=IA_BASE[p], msgs=[]; if(instr.trim()) msgs.push({role:"system", content:instr});
   msgs.push({role:"user", content: imagens.length ? imagens.map(u=>({type:"image_url", image_url:{url:u}})).concat([{type:"text", text:prompt}]) : prompt});
   const body={model:modelo, messages:msgs, max_tokens:Math.min(max,8000)};
-  if(json && !web) body.response_format={type:"json_object"};
+  if(json && !web && JSON_OK.has(p)) body.response_format={type:"json_object"};
+  const cab={"content-type":"application/json", Authorization:"Bearer "+k}; if(p==="openrouter"){ cab["HTTP-Referer"]=location.origin+location.pathname; cab["X-Title"]="testamoslegal"; }
   if(web && p==="qwen") body.enable_search=true;
   if(web && p==="kimi" && !imagens.length) body.tools=[{type:"builtin_function", function:{name:"$web_search"}}];
   for(let volta=0; volta<4; volta++){
-    const d=await iaFetch(p, base+"/chat/completions",{method:"POST", headers:{"content-type":"application/json", Authorization:"Bearer "+k}, body:JSON.stringify(body)});
+    let d; try{ d=await iaFetch(p, base+"/chat/completions",{method:"POST", headers:cab, body:JSON.stringify(body)}); }
+    catch(e){ if(body.response_format && /\b(400|422)\b/.test(e.message)){ delete body.response_format; d=await iaFetch(p, base+"/chat/completions",{method:"POST", headers:cab, body:JSON.stringify(body)}); } else throw e; }
     const ch=(d.choices||[])[0]||{}, m=ch.message||{};
     if(ch.finish_reason==="tool_calls" && (m.tool_calls||[]).length){ body.messages.push(m); m.tool_calls.forEach(tc=>body.messages.push({role:"tool", tool_call_id:tc.id, name:tc.function.name, content:tc.function.arguments})); continue; }
-    return {texto:typeof m.content==="string"?m.content:(m.content||[]).map(x=>x.text||"").join(""), fontes:[]};
+    let tx=typeof m.content==="string"?m.content:(m.content||[]).map(x=>x.text||"").join(""); tx=tx.replace(/<think>[\s\S]*?<\/think>/g,"").trim();
+    if(!tx) throw new Error(`${IA_PROV[p].nome} não devolveu texto. Tente outro modelo em IA.`);
+    return {texto:tx, fontes:[]};
   }
-  throw new Error("Kimi não terminou a busca. Tente de novo.");
+  throw new Error(IA_PROV[p].nome+" não terminou a resposta. Tente de novo.");
 }
 function parseJSON(txt){
   txt=String(txt||"").replace(/```(json)?/g,"");
@@ -681,11 +730,12 @@ async function iaImagem({prompt, refs=[], proporcao="1:1"}){
   return (d.data||[]).filter(x=>x.b64_json).map(x=>b64Blob(x.b64_json,"image/png"));
 }
 function b64Blob(b64, type){ const bin=atob(b64), u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new Blob([u],{type}); }
-/* transcrição pela OpenAI (Whisper com tempo por palavra) */
-async function iaTranscreverOpenAI(wav){
-  const k=iaChave("openai"); if(!k) throw new Error("Sem chave do GPT");
-  const fd=new FormData(); fd.append("file", wav, "audio.wav"); fd.append("model","whisper-1"); fd.append("response_format","verbose_json"); fd.append("timestamp_granularities[]","word"); fd.append("language","pt");
-  const d=await iaFetch("openai","https://api.openai.com/v1/audio/transcriptions",{method:"POST", headers:{Authorization:"Bearer "+k}, body:fd});
+/* transcrição na nuvem (Whisper com tempo por palavra): Groq (grátis) ou OpenAI */
+function modoTranscricao(){ const t=lsGet("transcricao",""); if(t==="groq"&&iaChave("groq")) return "groq"; if(t==="openai"&&iaChave("openai")) return "openai"; if(t==="local") return "local"; return iaChave("groq")?"groq":"local"; }
+async function iaTranscreverNuvem(wav, prov){
+  const k=iaChave(prov); if(!k) throw new Error("Sem chave do "+IA_PROV[prov].nome);
+  const fd=new FormData(); fd.append("file", wav, "audio.wav"); fd.append("model", prov==="groq"?"whisper-large-v3-turbo":"whisper-1"); fd.append("response_format","verbose_json"); fd.append("timestamp_granularities[]","word"); fd.append("language","pt");
+  const d=await iaFetch(prov, (prov==="groq"?IA_BASE.groq:"https://api.openai.com/v1")+"/audio/transcriptions",{method:"POST", headers:{Authorization:"Bearer "+k}, body:fd});
   return (d.words||[]).map(w=>({text:w.word, s:w.start, e:w.end}));
 }
 
@@ -693,19 +743,23 @@ async function iaTranscreverOpenAI(wav){
 TELAS.ia = { abrir(){ renderIA(); } };
 function renderIA(){
   const c=iaCfg(), tp=iaTextoProv(), ip=iaImagemProv();
-  $("#iaLista").innerHTML=Object.entries(IA_PROV).map(([p,P])=>{ const k=c.chaves[p]||"", l=c.listas[p]||[], mod=c.modelos[p]||{};
+  const cartao=([p,P])=>{ const k=c.chaves[p]||"", l=c.listas[p]||[], mod=c.modelos[p]||{};
     const sel=(uso,rot)=>`<label class="campo"><span>${rot}</span><select data-iamod="${p}:${uso}">${[...new Set([iaModelo(p,uso)].concat(l))].filter(Boolean).map(m=>`<option ${m===iaModelo(p,uso)?"selected":""}>${esc(m)}</option>`).join("")}</select></label>`;
     return `<article class="prov ${k?"tem":""}" style="--pc:${P.cor}">
       <header><i class="prov-dot"></i><div><h3>${P.nome}</h3><small>${P.empresa}</small></div>
-        <div class="prov-tags">${P.web?"<span>web</span>":""}${P.visao?"<span>lê imagem</span>":""}${P.imagem?"<span>gera imagem</span>":""}${P.transcreve?"<span>transcreve</span>":""}</div></header>
+        <div class="prov-tags">${P.gratis==="sim"?`<span class="gratis">chave grátis</span>`:P.gratis==="teste"?`<span class="gratis">créditos grátis</span>`:""}${P.web?"<span>web</span>":""}${P.visao?"<span>lê imagem</span>":""}${P.imagem?"<span>gera imagem</span>":""}${P.transcreve?"<span>transcreve</span>":""}</div></header>
       <label class="campo"><span>Chave da API · pegue em <a href="${P.url}" target="_blank" rel="noopener">${P.onde}</a></span>
         <div class="linha"><input type="password" data-iakey="${p}" value="${esc(k)}" placeholder="cole a chave aqui" autocomplete="new-password" spellcheck="false"><button class="bt" type="button" data-iatesta="${p}" ${k?"":"disabled"}>Testar</button></div></label>
       ${k?`<div class="grade2">${sel("texto","Modelo de texto")}${P.visao?sel("visao","Modelo que lê imagem"):""}${P.imagem?sel("imagem","Modelo de imagem"):""}</div>
       <div class="linha usos"><label class="radio"><input type="radio" name="iaTexto" value="${p}" ${tp===p?"checked":""}> usar pra texto, legendas e insights</label>${P.imagem?`<label class="radio"><input type="radio" name="iaImg" value="${p}" ${ip===p?"checked":""}> usar pra gerar imagem</label>`:""}</div>`:""}
       <p class="mini muted" data-iast="${p}">${l.length?l.length+" modelos disponíveis na sua conta":""}</p>
-    </article>`; }).join("");
+    </article>`; };
+  const ent=Object.entries(IA_PROV);
+  $("#iaLista").innerHTML=`<h3 class="prov-grupo">Com chave grátis</h3><div class="provs">${ent.filter(([,P])=>P.gratis==="sim").map(cartao).join("")}</div>
+    <h3 class="prov-grupo">Com créditos grátis no cadastro</h3><div class="provs">${ent.filter(([,P])=>P.gratis==="teste").map(cartao).join("")}</div>
+    <h3 class="prov-grupo">Pagos</h3><div class="provs">${ent.filter(([,P])=>!P.gratis).map(cartao).join("")}</div>`;
   $("#iaResumo").innerHTML = tp ? `Texto, legendas e insights: <b>${IA_PROV[tp].nome}</b> · ${esc(iaModelo(tp,"texto"))}${ip?` &nbsp;·&nbsp; Imagens: <b>${IA_PROV[ip].nome}</b> · ${esc(iaModelo(ip,"imagem"))}`:" &nbsp;·&nbsp; Imagens: cole uma chave do Gemini ou do GPT"}` : "Nenhuma IA ligada ainda. Cole a chave de pelo menos um provedor.";
-  const tr=lsGet("transcricao","local"); $("#iaTransc").innerHTML=`<label class="radio"><input type="radio" name="iaTr" value="local" ${tr!=="openai"?"checked":""}> No computador (grátis, sem chave, baixa o modelo na 1ª vez)</label><label class="radio"><input type="radio" name="iaTr" value="openai" ${tr==="openai"?"checked":""} ${iaChave("openai")?"":"disabled"}> Pela OpenAI (Whisper, mais rápido, gasta da chave do GPT)</label>`;
+  const tr=modoTranscricao(); $("#iaTransc").innerHTML=`<label class="radio"><input type="radio" name="iaTr" value="groq" ${tr==="groq"?"checked":""} ${iaChave("groq")?"":"disabled"}> Pelo Groq: grátis e rápido (um vídeo de 1 min sai em segundos), com o tempo exato de cada palavra. ${iaChave("groq")?"":"Cole a chave do Groq acima."}</label><label class="radio"><input type="radio" name="iaTr" value="openai" ${tr==="openai"?"checked":""} ${iaChave("openai")?"":"disabled"}> Pela OpenAI (Whisper, gasta da chave do GPT)</label><label class="radio"><input type="radio" name="iaTr" value="local" ${tr==="local"?"checked":""}> No computador, sem chave (mais lento, depende da placa de vídeo, e o tempo de cada palavra é aproximado)</label>`;
 }
 $("#t-ia").addEventListener("change", async e=>{
   const c=iaCfg(); const k=e.target.dataset.iakey;
@@ -1585,7 +1639,7 @@ let VIDEOS = [];
 const ARQ = {};                  // id do vídeo -> File (nesta sessão)
 const salvaT = {};
 function salvaVideo(v, ja){ v.editado=new Date().toISOString(); clearTimeout(salvaT[v.id]); const go=()=>idb.set("videos", v.id, JSON.parse(JSON.stringify(v))).catch(()=>toast("Não deu pra salvar o vídeo")); if(ja) return go(); salvaT[v.id]=setTimeout(go, 350); }
-async function carregaVideos(){ VIDEOS=(await idb.all("videos").catch(()=>[])).sort((a,b)=>(b.editado||"").localeCompare(a.editado||"")); }
+async function carregaVideos(){ const mem=Object.fromEntries(VIDEOS.map(v=>[v.id,v])); VIDEOS=(await idb.all("videos").catch(()=>[])).map(v=>mem[v.id]||v).sort((a,b)=>(b.editado||"").localeCompare(a.editado||"")); VIDEOS.forEach(v=>{ if(v.estado==="transcrevendo"&&!TRANSC_ATIVO[v.id]){ v.estado="erro"; v.etapa="a transcrição parou (a página foi fechada ou recarregada)"; } }); }
 const videoDe = id => VIDEOS.find(v=>v.id===id);
 /* tempo: o corte é uma lista de trechos do vídeo original */
 const cortesDe = v => (v.cortes&&v.cortes.length) ? v.cortes : [{in:0, out:v.dur||0}];
@@ -1680,35 +1734,41 @@ async function audio16k(file, msg){
   return out;
 }
 /* janelas de ~60 s cortadas no ponto mais silencioso */
-function janelas(pcm){ const R=16000, alvo=60*R, folga=4*R, out=[]; let a=0;
+function janelas(pcm, seg=60){ const R=16000, alvo=seg*R, folga=Math.min(4,seg/7)*R, out=[]; let a=0;
   while(a<pcm.length){ let b=Math.min(pcm.length, a+alvo); if(b<pcm.length){ let melhor=b, menor=Infinity; for(let x=b-folga;x<b+folga&&x<pcm.length-R/10;x+=R/20){ let en=0; for(let k=0;k<R/10;k+=8) en+=Math.abs(pcm[x+k]); if(en<menor){ menor=en; melhor=x; } } b=melhor; } out.push([a,b]); a=b; }
   return out; }
 function wav16(pcm){ const n=pcm.length, buf=new ArrayBuffer(44+n*2), d=new DataView(buf); const s=(o,t)=>{ for(let i=0;i<t.length;i++) d.setUint8(o+i,t.charCodeAt(i)); };
   s(0,"RIFF"); d.setUint32(4,36+n*2,true); s(8,"WAVE"); s(12,"fmt "); d.setUint32(16,16,true); d.setUint16(20,1,true); d.setUint16(22,1,true); d.setUint32(24,16000,true); d.setUint32(28,32000,true); d.setUint16(32,2,true); d.setUint16(34,16,true); s(36,"data"); d.setUint32(40,n*2,true);
   for(let i=0;i<n;i++) d.setInt16(44+i*2, clamp(pcm[i],-1,1)*32767, true); return new Blob([buf],{type:"audio/wav"}); }
+const TRANSC_ATIVO={}, TRANSC_PARA={};
 async function transcrever(v){
+  if(TRANSC_ATIVO[v.id]) return; TRANSC_ATIVO[v.id]=true; delete TRANSC_PARA[v.id];
   const msg=m=>{ v.etapa=m; if(TELA==="editor"&&ED.v&&ED.v.id===v.id) edEstado(); };
   try{
     v.estado="transcrevendo"; msg("preparando"); salvaVideo(v);
     const file=await arquivoDe(v); if(!file) throw new Error("sem o arquivo do vídeo");
     const pcm=await audio16k(file, msg); let words=[];
     if(!pcm||!pcm.length){ v.cues=[]; v.estado="pronto"; v.etapa="o vídeo não tem áudio"; salvaVideo(v,true); msg(v.etapa); return; }
-    const jan=janelas(pcm);
-    if(lsGet("transcricao","local")==="openai" && iaChave("openai")){
-      for(let i=0;i<jan.length;i+=10){ const a=jan[i][0], b=jan[Math.min(jan.length,i+10)-1][1]; msg(`transcrevendo pela OpenAI ${Math.round(a/pcm.length*100)}%`); const ws=await iaTranscreverOpenAI(wav16(pcm.subarray(a,b))); words=words.concat(ws.map(w=>({text:w.text, s:w.s+a/16000, e:w.e+a/16000}))); }
+    const modo=modoTranscricao(), t0=performance.now(), seg_=()=>Math.round((performance.now()-t0)/1000)+" s";
+    if(modo!=="local"){
+      const jan=janelas(pcm, 8*60); const nome=IA_PROV[modo].nome;
+      for(let i=0;i<jan.length;i++){ if(TRANSC_PARA[v.id]) throw new Error("transcrição parada"); const [a,b]=jan[i]; msg(`transcrevendo pelo ${nome} ${Math.round(a/pcm.length*100)}% · ${seg_()}`); const ws=await iaTranscreverNuvem(wav16(pcm.subarray(a,b)), modo); words=words.concat(ws.map(w=>({text:w.text, s:w.s+a/16000, e:w.e+a/16000}))); }
     } else {
-      const asr=await carregaAsr(msg);
-      for(let i=0;i<jan.length;i++){ const [a,b]=jan[i], off=a/16000; msg(`transcrevendo ${Math.round(a/pcm.length*100)}% (no seu computador)`);
-        let out; try{ out=await asr(pcm.subarray(a,b), {language:"portuguese", task:"transcribe", return_timestamps:"word", chunk_length_s:30, stride_length_s:5}); }catch(e){ out=null; console.warn(e); }
-        const fimJ=(b-a)/16000+0.3; if(out&&out.chunks) words=words.concat(out.chunks.filter(c=>c.timestamp&&c.timestamp[0]!=null&&c.timestamp[0]<fimJ).map(c=>({text:c.text, s:off+c.timestamp[0], e:off+(c.timestamp[1]!=null?c.timestamp[1]:c.timestamp[0]+0.3)})));
-        else { out=await asr(pcm.subarray(a,b), {language:"portuguese", task:"transcribe", return_timestamps:true, chunk_length_s:30, stride_length_s:5}); (out.chunks||[]).forEach(c=>{ const s0=off+(c.timestamp[0]||0), e0=off+(c.timestamp[1]!=null?c.timestamp[1]:(c.timestamp[0]||0)+3), tk=String(c.text||"").trim().split(/\s+/).filter(Boolean); tk.forEach((w,j)=>words.push({text:w, s:s0+(e0-s0)*j/tk.length, e:s0+(e0-s0)*(j+1)/tk.length})); }); }
+      const asr=await carregaAsr(msg); const jan=janelas(pcm, 28);
+      for(let i=0;i<jan.length;i++){ if(TRANSC_PARA[v.id]) throw new Error("transcrição parada"); const [a,b]=jan[i], off=a/16000, durJ=(b-a)/16000;
+        msg(`transcrevendo no computador ${Math.round(a/pcm.length*100)}% · ${seg_()}`);
+        const lim=Math.max(90, durJ*5)*1000;
+        const out=await Promise.race([asr(pcm.subarray(a,b), {language:"portuguese", task:"transcribe", return_timestamps:true}), new Promise((_,rej)=>setTimeout(()=>rej(new Error("o computador está demorando demais pra transcrever. Cole uma chave grátis do Groq em IA: um vídeo de 1 minuto sai em segundos")), lim))]);
+        (out.chunks||[{timestamp:[0,durJ], text:out.text||""}]).forEach(c=>{ const s0=off+(c.timestamp[0]||0), e0=off+Math.min(durJ, c.timestamp[1]!=null?c.timestamp[1]:(c.timestamp[0]||0)+3); if(s0>=off+durJ) return; const tk=String(c.text||"").trim().split(/\s+/).filter(Boolean); const pesos=tk.map(w=>Math.max(2,w.length)), tot=pesos.reduce((x,y)=>x+y,0)||1; let acc=s0; tk.forEach((w,j)=>{ const d=(e0-s0)*pesos[j]/tot; words.push({text:w, s:acc, e:acc+d}); acc+=d; }); });
       }
     }
+    delete TRANSC_PARA[v.id];
     words=words.filter(w=>w.s<v.dur).map(w=>({...w, e:Math.min(w.e, v.dur)})); v.cues=palavrasParaLegendas(words); v.estado="pronto"; v.etapa=""; salvaVideo(v,true);
     await aplicaPedidoMotion(v);
     if(TELA==="editor"&&ED.v&&ED.v.id===v.id){ edEstado(); edTudo(); }
     toast(v.cues.length?`Transcrição pronta: ${v.cues.length} legenda${v.cues.length>1?"s":""}`:"Não achei fala nesse vídeo");
   }catch(e){ console.error(e); v.estado="erro"; v.etapa=e.message||String(e); salvaVideo(v,true); if(TELA==="editor"&&ED.v&&ED.v.id===v.id) edEstado(); }
+  finally{ delete TRANSC_ATIVO[v.id]; delete TRANSC_PARA[v.id]; }
 }
 
 /* ---------- assistente: legenda, motion e formato ---------- */
@@ -1794,10 +1854,11 @@ async function edCarregaArquivo(f){
 vid.addEventListener("seeked", ()=>{ if(!ED.tocando) desenhaEd(); });
 function edEstado(){ const v=ED.v; if(!v) return; const st=$("#edEstado");
   st.className="estado "+(v.estado||""); st.textContent = v.estado==="transcrevendo" ? (v.etapa||"transcrevendo") : v.estado==="erro" ? "erro na transcrição: "+(v.etapa||"") : ((v.cues||[]).length+((v.cues||[]).length===1?" legenda · ":" legendas · ")+fmtDur(outDur(v)));
-  const b=$("#edRetenta"); if(b) b.hidden=v.estado!=="erro"; }
+  const b=$("#edRetenta"); if(b) b.hidden=v.estado!=="erro"; const pa=$("#edPara"); if(pa) pa.hidden=v.estado!=="transcrevendo"; }
 $("#edNome").addEventListener("input", e=>{ if(!ED.v) return; ED.v.nome=e.target.value; salvaVideo(ED.v); });
 $("#edVolta").addEventListener("click", ()=>ir("videos"));
 $("#edRetenta").addEventListener("click", ()=>{ if(ED.v) transcrever(ED.v); });
+$("#edPara").addEventListener("click", ()=>{ if(ED.v){ TRANSC_PARA[ED.v.id]=true; toast("A transcrição para no fim do trecho atual"); } });
 function edTudo(){ if(!ED.v) return; edEstado(); renderTl(); edInsp(); desenhaEd(); }
 const edMuda = (insp=false) => { if(!ED.v) return; salvaVideo(ED.v); renderTl(); if(insp) edInsp(); desenhaEd(); };
 
