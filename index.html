@@ -129,12 +129,12 @@ body[data-tela="editor"] .tela{max-width:none;gap:14px}
 .estado.transcrevendo{border-color:var(--acento);color:var(--acento)}.estado.erro{border-color:var(--erro);color:var(--erro)}
 .ed-corpo{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:16px;align-items:start}
 .ed-palco{display:flex;flex-direction:column;align-items:center;gap:10px;background:var(--folha2);border:1px solid var(--linha);border-radius:12px;padding:16px;min-height:300px}
-.ed-tela{position:relative;height:min(58vh,760px);max-width:100%;background:#000;border-radius:6px;overflow:hidden;cursor:grab;box-shadow:var(--sombra)}
+.ed-tela{position:relative;height:clamp(260px,calc(100vh - 430px),760px);max-width:100%;background:#000;border-radius:6px;overflow:hidden;cursor:grab;box-shadow:var(--sombra)}
 .ed-tela:active{cursor:grabbing}
 .ed-tela canvas{width:100%;height:100%;display:block}
 .ed-semarq{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(10,10,10,.82);color:#fff;text-align:center;padding:20px;font-size:14px}
 .ed-ctrl{display:flex;align-items:center;gap:12px;width:100%;max-width:640px}
-.ed-insp{background:var(--folha);border:1px solid var(--linha);border-radius:12px;display:flex;flex-direction:column;max-height:calc(58vh + 90px);min-height:300px}
+.ed-insp{background:var(--folha);border:1px solid var(--linha);border-radius:12px;display:flex;flex-direction:column;max-height:clamp(330px,calc(100vh - 340px),850px);min-height:300px}
 .abas{display:flex;border-bottom:1px solid var(--linha);padding:0 8px}
 .abas button{flex:1;border:0;background:none;padding:12px 4px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
 .abas button[aria-selected="true"]{color:var(--tinta);border-bottom-color:var(--acento)}
@@ -1700,14 +1700,14 @@ async function transcrever(v){
       const asr=await carregaAsr(msg);
       for(let i=0;i<jan.length;i++){ const [a,b]=jan[i], off=a/16000; msg(`transcrevendo ${Math.round(a/pcm.length*100)}% (no seu computador)`);
         let out; try{ out=await asr(pcm.subarray(a,b), {language:"portuguese", task:"transcribe", return_timestamps:"word", chunk_length_s:30, stride_length_s:5}); }catch(e){ out=null; console.warn(e); }
-        if(out&&out.chunks) words=words.concat(out.chunks.filter(c=>c.timestamp&&c.timestamp[0]!=null).map(c=>({text:c.text, s:off+c.timestamp[0], e:off+(c.timestamp[1]!=null?c.timestamp[1]:c.timestamp[0]+0.3)})));
+        const fimJ=(b-a)/16000+0.3; if(out&&out.chunks) words=words.concat(out.chunks.filter(c=>c.timestamp&&c.timestamp[0]!=null&&c.timestamp[0]<fimJ).map(c=>({text:c.text, s:off+c.timestamp[0], e:off+(c.timestamp[1]!=null?c.timestamp[1]:c.timestamp[0]+0.3)})));
         else { out=await asr(pcm.subarray(a,b), {language:"portuguese", task:"transcribe", return_timestamps:true, chunk_length_s:30, stride_length_s:5}); (out.chunks||[]).forEach(c=>{ const s0=off+(c.timestamp[0]||0), e0=off+(c.timestamp[1]!=null?c.timestamp[1]:(c.timestamp[0]||0)+3), tk=String(c.text||"").trim().split(/\s+/).filter(Boolean); tk.forEach((w,j)=>words.push({text:w, s:s0+(e0-s0)*j/tk.length, e:s0+(e0-s0)*(j+1)/tk.length})); }); }
       }
     }
-    v.cues=palavrasParaLegendas(words); v.estado="pronto"; v.etapa=""; salvaVideo(v,true);
+    words=words.filter(w=>w.s<v.dur).map(w=>({...w, e:Math.min(w.e, v.dur)})); v.cues=palavrasParaLegendas(words); v.estado="pronto"; v.etapa=""; salvaVideo(v,true);
     await aplicaPedidoMotion(v);
     if(TELA==="editor"&&ED.v&&ED.v.id===v.id){ edEstado(); edTudo(); }
-    toast(`Transcrição pronta: ${v.cues.length} legendas`);
+    toast(v.cues.length?`Transcrição pronta: ${v.cues.length} legenda${v.cues.length>1?"s":""}`:"Não achei fala nesse vídeo");
   }catch(e){ console.error(e); v.estado="erro"; v.etapa=e.message||String(e); salvaVideo(v,true); if(TELA==="editor"&&ED.v&&ED.v.id===v.id) edEstado(); }
 }
 
@@ -1793,7 +1793,7 @@ async function edCarregaArquivo(f){
 }
 vid.addEventListener("seeked", ()=>{ if(!ED.tocando) desenhaEd(); });
 function edEstado(){ const v=ED.v; if(!v) return; const st=$("#edEstado");
-  st.className="estado "+(v.estado||""); st.textContent = v.estado==="transcrevendo" ? (v.etapa||"transcrevendo") : v.estado==="erro" ? "erro na transcrição: "+(v.etapa||"") : ((v.cues||[]).length+" legendas · "+fmtDur(outDur(v)));
+  st.className="estado "+(v.estado||""); st.textContent = v.estado==="transcrevendo" ? (v.etapa||"transcrevendo") : v.estado==="erro" ? "erro na transcrição: "+(v.etapa||"") : ((v.cues||[]).length+((v.cues||[]).length===1?" legenda · ":" legendas · ")+fmtDur(outDur(v)));
   const b=$("#edRetenta"); if(b) b.hidden=v.estado!=="erro"; }
 $("#edNome").addEventListener("input", e=>{ if(!ED.v) return; ED.v.nome=e.target.value; salvaVideo(ED.v); });
 $("#edVolta").addEventListener("click", ()=>ir("videos"));
